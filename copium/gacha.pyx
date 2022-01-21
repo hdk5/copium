@@ -22,7 +22,7 @@ cdef class __PullResult:
         self.BANNER = 2
 
 
-cdef class __GachaMachineCompanion:
+cdef class __GachaMachine__companion:
     cdef public __PullResult PullResult
 
     cdef public double SSR_BASE_RATE
@@ -61,8 +61,9 @@ cdef class __GachaMachineCompanion:
 
         return np.asarray(results, dtype=np.uintc)
 
-
-_GachaMachineCompanion = __GachaMachineCompanion()
+# The word `companion` is shamelessly taken from Kotlin here
+# Fuck you Cython for not letting me do that the normal way
+GachaMachine__companion = __GachaMachine__companion()
 
 
 cdef class GachaMachine:
@@ -78,14 +79,14 @@ cdef class GachaMachine:
     6. After 2 failed banner pulls, banner unit is guaranteed on next SSR pull.
     """
 
-    cdef public __GachaMachineCompanion companion
+    cdef public __GachaMachine__companion companion
 
     cdef unsigned int ssr_pity_counter
     cdef unsigned int banner_pity_counter
     cdef bitgen_t *rng
 
     def __init__(self):
-        self.companion = _GachaMachineCompanion
+        self.companion = GachaMachine__companion
         self.rng = <bitgen_t *> PyCapsule_GetPointer(
             np.random.PCG64DXSM().capsule,
             "BitGenerator",
