@@ -52,38 +52,11 @@ cdef class __GachaMachineCompanion:
         pullresult_t expected,
         unsigned int amount,
     ):
+        cdef GachaMachine gm = GachaMachine()
         cdef unsigned int[::1] results = np.zeros(samples, dtype=np.uintc)
 
         cdef int i
-        cdef int n = samples
-
-        cdef GachaMachine gm
-
-        with nogil, parallel():
-            for i in prange(n, schedule='static'):
-                with gil:
-                    gm = GachaMachine()
-
-                # It segfaults when `samples` is high enough,
-                # and I don't understand why
-                results[i] = gm._c_pull_while(expected, amount)
-
-        return np.asarray(results, dtype=np.uintc)
-
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    cpdef make_pulls_distribution_nomp(
-        self,
-        unsigned int samples,
-        pullresult_t expected,
-        unsigned int amount,
-    ):
-        cdef unsigned int[::1] results = np.zeros(samples, dtype=np.uintc)
-
-        cdef int i
-        cdef GachaMachine gm
         for i in range(samples):
-            gm = GachaMachine()
             results[i] = gm._c_pull_while(expected, amount)
 
         return np.asarray(results, dtype=np.uintc)
@@ -113,14 +86,15 @@ cdef class GachaMachine:
 
     def __init__(self):
         self.companion = _GachaMachineCompanion
-
-        self.ssr_pity_counter = 0
-        self.banner_pity_counter = 0
-
         self.rng = <bitgen_t *> PyCapsule_GetPointer(
             np.random.PCG64DXSM().capsule,
             "BitGenerator",
         )
+        self.reset()
+
+    cpdef reset(self):
+        self.ssr_pity_counter = 0
+        self.banner_pity_counter = 0
 
     cdef double _ssr_rate(self) nogil:
         return self.companion.SSR_BASE_RATE + self.companion.SSR_PITY_RATE_STEP * max(
