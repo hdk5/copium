@@ -70,6 +70,24 @@ cdef class __GachaMachineCompanion:
 
         return np.asarray(results, dtype=np.uintc)
 
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cpdef make_pulls_distribution_nomp(
+        self,
+        unsigned int samples,
+        pullresult_t expected,
+        unsigned int amount,
+    ):
+        cdef unsigned int[::1] results = np.zeros(samples, dtype=np.uintc)
+
+        cdef int i
+        cdef GachaMachine gm
+        for i in range(samples):
+            gm = GachaMachine()
+            results[i] = gm._c_pull_while(expected, amount)
+
+        return np.asarray(results, dtype=np.uintc)
+
 
 _GachaMachineCompanion = __GachaMachineCompanion()
 
