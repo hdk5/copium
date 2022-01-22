@@ -1,12 +1,9 @@
 import numpy as np
-cimport numpy as np
-cimport cython
-from cython.parallel import parallel, prange
-from cpython.pycapsule cimport PyCapsule_IsValid, PyCapsule_GetPointer
-from more_itertools import repeatfunc
-from numpy.random cimport bitgen_t
-cimport openmp
 
+cimport cython
+cimport numpy as np
+from cpython.pycapsule cimport PyCapsule_GetPointer
+from numpy.random cimport bitgen_t
 
 ctypedef char pullresult_t
 
@@ -57,7 +54,7 @@ cdef class __GachaMachine__companion:
 
         cdef int i
         for i in range(samples):
-            results[i] = gm._c_pull_while(expected, amount)
+            results[i] = gm.pull_while(expected, amount)
 
         return np.asarray(results, dtype=np.uintc)
 
@@ -97,31 +94,31 @@ cdef class GachaMachine:
         self.ssr_pity_counter = 0
         self.banner_pity_counter = 0
 
-    cdef double _ssr_rate(self) nogil:
+    cdef double ssr_rate(self):
         return self.companion.SSR_BASE_RATE + self.companion.SSR_PITY_RATE_STEP * max(
             0, self.ssr_pity_counter - self.companion.SSR_PITY_MIN_PULLS + 1
         )
 
-    cdef double _banner_rate(self) nogil:
+    cdef double banner_rate(self):
         return (
             self.companion.BANNER_BASE_RATE
             if self.banner_pity_counter < self.companion.BANNER_PITY_MIN_PULLS
             else 1
         )
 
-    cdef double rand(self) nogil:
+    cdef double rand(self):
         return self.rng.next_double(self.rng.state)
 
-    cdef pullresult_t _c_pull(self) nogil:
+    cpdef pullresult_t pull(self):
         cdef pullresult_t pull_result
         cdef bint is_ssr_pull, is_banner_pull
 
-        is_ssr_pull = self.rand() < self._ssr_rate()
+        is_ssr_pull = self.rand() < self.ssr_rate()
 
         if is_ssr_pull:
             self.ssr_pity_counter = 0
 
-            is_banner_pull = self.rand() < self._banner_rate()
+            is_banner_pull = self.rand() < self.banner_rate()
 
             if is_banner_pull:
                 self.banner_pity_counter = 0
@@ -137,13 +134,13 @@ cdef class GachaMachine:
 
         return pull_result
 
-    cdef unsigned int _c_pull_while(self, pullresult_t expected, unsigned int amount) nogil:
+    cpdef unsigned int pull_while(self, pullresult_t expected, unsigned int amount):
         cdef unsigned int total_pulls = 0
         cdef unsigned int expected_pulls = 0
         cdef pullresult_t pull_result
 
         while True:
-            pull_result = self._c_pull()
+            pull_result = self.pull()
             total_pulls += 1
 
             if pull_result == expected:
@@ -153,13 +150,3 @@ cdef class GachaMachine:
                     break
 
         return total_pulls
-
-    # Python wrappers for c methods
-    # Do not override in Python: override c methods in Cython instead
-    # Can't use cpdef as nogil is required
-
-    def pull(self):
-        return self._c_pull()
-
-    def pull_while(self, expected, amount):
-        return self._c_pull_while(expected, amount)
