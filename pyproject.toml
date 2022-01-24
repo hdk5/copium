@@ -12,7 +12,7 @@ numpy = "^1.22.1"
 matplotlib = "^3.5.1"
 more-itertools = "^8.12.0"
 notebook = "^6.4.7"
-Cython = "^0.29.26"
+Cython = "^3.0.0a"
 scipy = "^1.7.3"
 
 [tool.poetry.dev-dependencies]
