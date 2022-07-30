@@ -56,14 +56,20 @@ cdef class GachaMachine:
     cdef unsigned int banner_pity_counter
     cdef bitgen_t *rng
 
-    def __cinit__(self):
-        self.SSR_BASE_RATE = 0.02
-        self.SSR_PITY_MIN_PULLS = 50
-        self.SSR_PITY_RATE_STEP = 0.025
-        self.BANNER_BASE_RATE = 0.5
-        self.BANNER_PITY_MIN_PULLS = 2
+    def __init__(
+        self, *,
+        ssr_base_rate=0.02,
+        ssr_pity_min_pulls=50,
+        ssr_pity_rate_step=0.025,
+        banner_base_rate=0.5,
+        banner_pity_min_pulls=2,
+    ):
+        self.SSR_BASE_RATE = ssr_base_rate
+        self.SSR_PITY_MIN_PULLS = ssr_pity_min_pulls
+        self.SSR_PITY_RATE_STEP = ssr_pity_rate_step
+        self.BANNER_BASE_RATE = banner_base_rate
+        self.BANNER_PITY_MIN_PULLS = banner_pity_min_pulls
 
-    def __init__(self):
         self.reset()
 
     @cython.boundscheck(False)
@@ -73,13 +79,14 @@ cdef class GachaMachine:
         unsigned int samples,
         PullResult expected,
         unsigned int amount,
+        unsigned int spark,
     ):
         cdef unsigned int[::1] results = np.zeros(samples, dtype=np.uintc)
 
-        cdef int i
+        cdef unsigned i
         for i in range(samples):
             self.reset()
-            results[i] = self.pull_until(expected, amount)
+            results[i] = self.pull_until(expected, amount, spark)
 
         return np.asarray(results, dtype=np.uintc)
 
@@ -128,7 +135,12 @@ cdef class GachaMachine:
 
         return pull_result
 
-    cpdef unsigned int pull_until(self, PullResult expected, unsigned int amount):
+    cpdef unsigned int pull_until(
+        self,
+        PullResult expected,
+        unsigned int amount,
+        unsigned spark,
+    ):
         cdef unsigned int total_pulls = 0
         cdef unsigned int expected_pulls = 0
         cdef PullResult pull_result
@@ -138,6 +150,9 @@ cdef class GachaMachine:
             total_pulls += 1
 
             if pull_result == expected:
+                expected_pulls += 1
+
+            if spark > 0 and total_pulls % spark == 0:
                 expected_pulls += 1
 
         return total_pulls
