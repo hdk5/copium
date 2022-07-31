@@ -112,14 +112,16 @@ cdef class GachaMachine:
 
     cpdef PullResult pull(self):
         cdef PullResult pull_result
-        cdef bint is_ssr_pull, is_banner_pull
 
-        is_ssr_pull = rand() < self.calc_ssr_rate()
+        cdef double pull_value = rand()
+        cdef double ssr_rate = self.calc_ssr_rate()
+        cdef double banner_rate = self.calc_banner_rate()
+
+        cdef bint is_ssr_pull = pull_value < ssr_rate
+        cdef bint is_banner_pull = pull_value < (ssr_rate * banner_rate)
 
         if is_ssr_pull:
             self.ssr_pity_counter = 0
-
-            is_banner_pull = rand() < self.calc_banner_rate()
 
             if is_banner_pull:
                 self.banner_pity_counter = 0
