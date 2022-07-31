@@ -19,9 +19,11 @@ from numpy.random cimport bitgen_t
 
 
 cdef double calc_rate(double base, unsigned pity_min, double pity_step, unsigned pity_counter):
-    cdef double rate = base + pity_step * max(
-        0, pity_counter - pity_min + 1
-    )
+    cdef double rate = base
+
+    if pity_min > 0 and pity_counter >= pity_min:
+        rate += pity_step * (pity_counter - pity_min + 1)
+
     return max(0., min(rate, 1.))
 
 
